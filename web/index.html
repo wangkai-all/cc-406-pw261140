@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>监测统计告警系统</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header>
+  <h1>监测统计告警系统</h1>
+  <nav>
+    <button data-tab="alerts" class="active">告警</button>
+    <button data-tab="baselines">基线</button>
+    <button data-tab="maintenance">维护窗口</button>
+    <button data-tab="jobs">重算作业</button>
+    <button data-tab="outbox">通知发件箱</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 告警列表 + 详情 -->
+  <section id="tab-alerts" class="tab active">
+    <div class="split">
+      <div>
+        <div class="row">
+          <h2>告警（原始事实行不可变）</h2>
+          <button id="refresh-alerts">刷新</button>
+        </div>
+        <table id="alerts-table">
+          <thead><tr><th>ID</th><th>测点/组织</th><th>窗口</th><th>级别</th><th>状态</th><th>分析版本</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="alert-detail" class="detail">
+        <p class="hint">点击左侧告警查看原始点、当时阈值与各分析版本。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 基线 -->
+  <section id="tab-baselines" class="tab">
+    <div class="row">
+      <h2>基线（稳健统计，人工批准后生效）</h2>
+      <button id="refresh-baselines">刷新</button>
+    </div>
+    <form id="train-form" class="card">
+      <h3>训练新基线提议</h3>
+      <label>训练起 <input type="text" name="train_start" placeholder="2026-11-10T00:00:00Z" required></label>
+      <label>训练止 <input type="text" name="train_end" placeholder="2026-11-15T00:00:00Z" required></label>
+      <label>测点（留空=全部）<input type="text" name="sensor_ids" placeholder="S1,S2"></label>
+      <button>训练（仅生成 proposed）</button>
+      <span class="form-msg"></span>
+    </form>
+    <table id="baselines-table">
+      <thead><tr><th>ID</th><th>测点</th><th>小时槽</th><th>中位数</th><th>MAD</th><th>z(w/c)</th><th>样本</th><th>状态</th><th>生效时间</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- 维护窗口 -->
+  <section id="tab-maintenance" class="tab">
+    <div class="row"><h2>维护窗口（可补录、可追溯更正）</h2><button id="refresh-mw">刷新</button></div>
+    <form id="mw-form" class="card">
+      <h3>补录维护记录</h3>
+      <label>测点 <input name="sensor_id" required placeholder="S1"></label>
+      <label>开始 <input name="start_ts" required placeholder="2026-11-16T03:00:00Z"></label>
+      <label>结束 <input name="end_ts" required placeholder="2026-11-16T05:00:00Z"></label>
+      <label>原因 <input name="reason" placeholder="计划检修"></label>
+      <button>补录</button><span class="form-msg"></span>
+    </form>
+    <table id="mw-table">
+      <thead><tr><th>ID</th><th>测点</th><th>开始</th><th>结束</th><th>原因</th><th>记录时间</th><th>更正链</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- 重算作业 -->
+  <section id="tab-jobs" class="tab">
+    <div class="row"><h2>重算作业（断点续算，不重复发告警）</h2><button id="refresh-jobs">刷新</button></div>
+    <form id="job-form" class="card">
+      <h3>创建重算作业</h3>
+      <label>模式
+        <select name="mode">
+          <option value="full_history">全历史重算（保留旧告警，产出更正分析版）</option>
+          <option value="forward_only">仅对以后生效（历史窗口不碰）</option>
+        </select>
+      </label>
+      <label>测点（留空=全部）<input name="scope_sensors" placeholder="S1"></label>
+      <label>范围起 <input name="range_start" placeholder="留空=最早数据"></label>
+      <label>范围止 <input name="range_end" placeholder="留空=现在"></label>
+      <label>原因 <input name="reason" placeholder="基线批准后全量复核"></label>
+      <label>本次最多处理窗口（演示中断，留空=跑完）<input name="max_windows" type="number" min="1"></label>
+      <button>创建并运行</button><span class="form-msg"></span>
+    </form>
+    <table id="jobs-table">
+      <thead><tr><th>作业ID</th><th>模式</th><th>状态</th><th>进度</th><th>原因</th><th>创建时间</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- 发件箱 -->
+  <section id="tab-outbox" class="tab">
+    <div class="row"><h2>通知发件箱（alert×channel 唯一）</h2><button id="refresh-outbox">刷新</button></div>
+    <table id="outbox-table">
+      <thead><tr><th>ID</th><th>告警</th><th>渠道</th><th>状态</th><th>内容</th><th>发送时间</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="row end"><button id="modal-close">关闭</button></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
